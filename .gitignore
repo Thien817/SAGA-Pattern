@@ -1,0 +1,29 @@
+## Build results
+[Bb]in/
+[Oo]bj/
+
+## User-specific files
+*.user
+*.rsuser
+*.suo
+
+## Visual Studio / VS Code
+.vs/
+.vscode/
+
+## NuGet
+*.nupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+
+## ASP.NET / .NET
+*.dbmdl
+*.jfm
+*.publishsettings
+
+## Logs
+*.log
+
+## OS files
+.DS_Store
+Thumbs.db
