@@ -5,6 +5,7 @@ using BusinessLogicLayer.Services;
 using DataAccessLayer.IRepositories;
 using DataAccessLayer.Infrastructure;
 using DataAccessLayer.Repositories;
+using SAGA_Pattern.BackgroundServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -59,9 +60,13 @@ builder.Services.AddSingleton(new JwtTokenService(jwtKey, jwtIssuer, jwtAudience
 
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+
+builder.Services.AddHostedService<OrderInboxProcessor>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
