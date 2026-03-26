@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "PaymentService": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:53293;http://localhost:53294"
+    }
+  }
+}

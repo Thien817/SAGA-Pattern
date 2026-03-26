@@ -1,0 +1,13 @@
+{
+    "profiles": {
+        "InventoyService": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "launchUrl": "swagger",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "applicationUrl": "https://localhost:51517;http://localhost:51518"
+        }
+    }
+}
