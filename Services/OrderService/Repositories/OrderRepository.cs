@@ -6,7 +6,7 @@ namespace OrderService.Repositories;
 
 public sealed class OrderRepository(SqlConnectionFactory connectionFactory) : IOrderRepository
 {
-    public async Task<IReadOnlyList<OrderWithItemsRecord>> GetOrdersWithItemsAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<OrderWithItemsRecord>> GetOrdersWithItemsAsync(int userId, CancellationToken cancellationToken = default)
     {
         const string sql = @"
 SELECT
@@ -28,7 +28,7 @@ LEFT JOIN ord.OrderItems oi ON oi.OrderId = o.OrderId
 WHERE o.UserId = @UserId
 ORDER BY o.CreatedAt DESC, oi.ProductId";
 
-        var byId = new Dictionary<Guid, (OrderRecord order, List<OrderItemRecord> items)>();
+        var byId = new Dictionary<int, (OrderRecord order, List<OrderItemRecord> items)>();
 
         await using var conn = connectionFactory.Create();
         await conn.OpenAsync(cancellationToken);
@@ -39,13 +39,13 @@ ORDER BY o.CreatedAt DESC, oi.ProductId";
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            var orderId = reader.GetGuid(0);
+            var orderId = reader.GetInt32(0);
             if (!byId.TryGetValue(orderId, out var entry))
             {
                 var order = new OrderRecord(
                     orderId,
-                    reader.IsDBNull(1) ? null : reader.GetGuid(1),
-                    reader.GetGuid(2),
+                    reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                    reader.GetInt32(2),
                     reader.GetDecimal(3),
                     reader.GetString(4),
                     reader.IsDBNull(5) ? null : reader.GetString(5),
@@ -59,8 +59,8 @@ ORDER BY o.CreatedAt DESC, oi.ProductId";
             if (!reader.IsDBNull(8))
             {
                 entry.items.Add(new OrderItemRecord(
-                    reader.GetGuid(8),
-                    reader.GetGuid(9),
+                    reader.GetInt32(8),
+                    reader.GetInt32(9),
                     reader.GetInt32(10),
                     reader.GetDecimal(11),
                     reader.GetDecimal(12)));
@@ -70,7 +70,7 @@ ORDER BY o.CreatedAt DESC, oi.ProductId";
         return byId.Values.Select(x => new OrderWithItemsRecord(x.order, x.items)).ToList();
     }
 
-    public async Task<OrderWithItemsRecord?> GetOrderWithItemsAsync(Guid orderId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<OrderWithItemsRecord?> GetOrderWithItemsAsync(int orderId, int userId, CancellationToken cancellationToken = default)
     {
         const string sql = @"
 SELECT
@@ -110,9 +110,9 @@ ORDER BY oi.ProductId";
             if (order is null)
             {
                 order = new OrderRecord(
-                    reader.GetGuid(0),
-                    reader.IsDBNull(1) ? null : reader.GetGuid(1),
-                    reader.GetGuid(2),
+                    reader.GetInt32(0),
+                    reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                    reader.GetInt32(2),
                     reader.GetDecimal(3),
                     reader.GetString(4),
                     reader.IsDBNull(5) ? null : reader.GetString(5),
@@ -123,8 +123,8 @@ ORDER BY oi.ProductId";
             if (!reader.IsDBNull(8))
             {
                 items.Add(new OrderItemRecord(
-                    reader.GetGuid(8),
-                    reader.GetGuid(9),
+                    reader.GetInt32(8),
+                    reader.GetInt32(9),
                     reader.GetInt32(10),
                     reader.GetDecimal(11),
                     reader.GetDecimal(12)));
@@ -134,7 +134,7 @@ ORDER BY oi.ProductId";
         return order is null ? null : new OrderWithItemsRecord(order, items);
     }
 
-    public async Task<Guid> CreateOrReplacePendingOrderAsync(Guid cartId, Guid userId, decimal totalAmount, IReadOnlyList<OrderItemCreate> items, CancellationToken cancellationToken = default)
+    public async Task<int> CreateOrReplacePendingOrderAsync(int cartId, int userId, decimal totalAmount, IReadOnlyList<OrderItemCreate> items, CancellationToken cancellationToken = default)
     {
         await using var conn = connectionFactory.Create();
         await conn.OpenAsync(cancellationToken);
@@ -150,16 +150,16 @@ WHERE CartId = @CartId
   AND UserId = @UserId
 ORDER BY CreatedAt DESC";
 
-            Guid? existingOrderId = null;
+            int? existingOrderId = null;
             await using (var findCmd = new SqlCommand(findOrderSql, conn, tx))
             {
                 findCmd.Parameters.AddWithValue("@CartId", cartId);
                 findCmd.Parameters.AddWithValue("@UserId", userId);
                 var existing = await findCmd.ExecuteScalarAsync(cancellationToken);
-                if (existing is Guid guid) existingOrderId = guid;
+                if (existing is int existingId) existingOrderId = existingId;
             }
 
-            Guid orderId;
+            int orderId;
             if (existingOrderId is not null)
             {
                 orderId = existingOrderId.Value;
@@ -202,7 +202,7 @@ VALUES (@CartId, @UserId, @TotalAmount, 'PENDING')";
                 insertCmd.Parameters.AddWithValue("@TotalAmount", totalAmount);
 
                 var created = await insertCmd.ExecuteScalarAsync(cancellationToken);
-                orderId = (Guid)created!;
+                orderId = (int)created!;
             }
 
             const string insertItemSql = @"
@@ -229,7 +229,7 @@ VALUES (@OrderId, @ProductId, @Quantity, @UnitPrice)";
         }
     }
 
-    public async Task<bool> CancelOrderAsync(Guid orderId, string? reason, CancellationToken cancellationToken = default)
+    public async Task<bool> CancelOrderAsync(int orderId, string? reason, CancellationToken cancellationToken = default)
     {
         const string sql = @"
 UPDATE ord.Orders
@@ -250,7 +250,7 @@ WHERE OrderId = @OrderId
         return rows > 0;
     }
 
-    public async Task<bool> CompleteOrderAsync(Guid orderId, CancellationToken cancellationToken = default)
+    public async Task<bool> CompleteOrderAsync(int orderId, CancellationToken cancellationToken = default)
     {
         const string sql = @"
 UPDATE ord.Orders

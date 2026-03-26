@@ -41,7 +41,7 @@ public sealed class OrderInboxProcessor : BackgroundService
         }
     }
 
-    private async Task<List<(Guid EventId, string EventType, string PayloadJson)>> DequeueAsync(CancellationToken cancellationToken)
+    private async Task<List<(int EventId, string EventType, string PayloadJson)>> DequeueAsync(CancellationToken cancellationToken)
     {
         const string sql = @"
 SELECT TOP (@BatchSize)
@@ -62,11 +62,11 @@ ORDER BY ReceivedAt";
 
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
-        var result = new List<(Guid, string, string)>();
+        var result = new List<(int, string, string)>();
         while (await reader.ReadAsync(cancellationToken))
         {
             result.Add((
-                reader.GetGuid(0),
+                reader.GetInt32(0),
                 reader.GetString(1),
                 reader.GetString(2)));
         }
@@ -75,7 +75,7 @@ ORDER BY ReceivedAt";
     }
 
     private async Task HandleOneAsync(
-        (Guid EventId, string EventType, string PayloadJson) inboxEvent,
+        (int EventId, string EventType, string PayloadJson) inboxEvent,
         CancellationToken cancellationToken)
     {
         try
@@ -96,7 +96,7 @@ ORDER BY ReceivedAt";
         }
     }
 
-    private async Task MarkProcessedAsync(Guid eventId, CancellationToken cancellationToken)
+    private async Task MarkProcessedAsync(int eventId, CancellationToken cancellationToken)
     {
         const string sql = @"
 UPDATE msg.InboxEvents
@@ -113,7 +113,7 @@ WHERE EventId = @EventId";
         await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private async Task MarkFailedAsync(Guid eventId, string errorMessage, CancellationToken cancellationToken)
+    private async Task MarkFailedAsync(int eventId, string errorMessage, CancellationToken cancellationToken)
     {
         const string sql = @"
 UPDATE msg.InboxEvents

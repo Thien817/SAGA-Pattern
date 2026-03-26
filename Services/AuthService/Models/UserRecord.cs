@@ -1,7 +1,7 @@
 namespace AuthService.Models;
 
 public sealed record UserRecord(
-    Guid UserId,
+    int UserId,
     string UserName,
     string PasswordHash,
     string RoleName,

@@ -7,7 +7,7 @@ namespace AuthService.Auth;
 
 public sealed class JwtTokenService(string key, string issuer, string audience)
 {
-    public string GenerateToken(Guid userId, string userName, string role, int expiresMinutes = 60)
+    public string GenerateToken(int userId, string userName, string role, int expiresMinutes = 60)
     {
         var claims = new List<Claim>
         {

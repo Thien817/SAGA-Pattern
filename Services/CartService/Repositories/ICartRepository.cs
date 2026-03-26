@@ -4,11 +4,11 @@ namespace CartService.Repositories;
 
 public interface ICartRepository
 {
-    Task<Guid> EnsureActiveCartAsync(Guid userId);
-    Task<IReadOnlyList<CartItemRecord>> GetCartItemsAsync(Guid cartId);
-    Task<ProductRecord?> GetProductAsync(Guid productId);
-    Task AddOrIncreaseItemAsync(Guid cartId, Guid productId, int quantity, decimal unitPrice);
-    Task<bool> UpdateItemQuantityAsync(Guid cartId, Guid cartItemId, int quantity);
-    Task RemoveItemAsync(Guid cartId, Guid cartItemId);
-    Task MarkCheckedOutAsync(Guid cartId);
+    Task<int> EnsureActiveCartAsync(int userId);
+    Task<IReadOnlyList<CartItemRecord>> GetCartItemsAsync(int cartId);
+    Task<ProductRecord?> GetProductAsync(int productId);
+    Task AddOrIncreaseItemAsync(int cartId, int productId, int quantity, decimal unitPrice);
+    Task<bool> UpdateItemQuantityAsync(int cartId, int cartItemId, int quantity);
+    Task RemoveItemAsync(int cartId, int cartItemId);
+    Task MarkCheckedOutAsync(int cartId);
 }

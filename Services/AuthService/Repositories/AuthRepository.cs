@@ -23,7 +23,7 @@ WHERE UserName = @UserName";
         if (!await reader.ReadAsync()) return null;
 
         return new UserRecord(
-            reader.GetGuid(0),
+            reader.GetInt32(0),
             reader.GetString(1),
             reader.GetString(2),
             reader.GetString(3),
@@ -50,18 +50,18 @@ WHERE rt.Token = @Token
         if (!await reader.ReadAsync()) return null;
 
         return new UserRecord(
-            reader.GetGuid(0),
+            reader.GetInt32(0),
             reader.GetString(1),
             reader.GetString(2),
             reader.GetString(3),
             reader.GetBoolean(4));
     }
 
-    public async Task SaveRefreshTokenAsync(Guid userId, string token, DateTime expiresAtUtc)
+    public async Task SaveRefreshTokenAsync(int userId, string token, DateTime expiresAtUtc)
     {
         const string sql = @"
-INSERT INTO auth.RefreshTokens (RefreshTokenId, UserId, Token, ExpiresAt, IsRevoked, CreatedAt)
-VALUES (NEWID(), @UserId, @Token, @ExpiresAt, 0, SYSUTCDATETIME())";
+INSERT INTO auth.RefreshTokens (UserId, Token, ExpiresAt, IsRevoked, CreatedAt)
+VALUES (@UserId, @Token, @ExpiresAt, 0, SYSUTCDATETIME())";
 
         await using var conn = connectionFactory.Create();
         await conn.OpenAsync();

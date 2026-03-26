@@ -9,13 +9,13 @@ public sealed class OrderService(IOrderRepository orderRepository) : IOrderServi
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public async Task<IReadOnlyList<OrderDto>> GetMyOrdersAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<OrderDto>> GetMyOrdersAsync(int userId, CancellationToken cancellationToken = default)
     {
         var orders = await orderRepository.GetOrdersWithItemsAsync(userId, cancellationToken);
         return orders.Select(MapToDto).ToList();
     }
 
-    public async Task<OrderDto?> GetOrderAsync(Guid orderId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<OrderDto?> GetOrderAsync(int orderId, int userId, CancellationToken cancellationToken = default)
     {
         var order = await orderRepository.GetOrderWithItemsAsync(orderId, userId, cancellationToken);
         return order is null ? null : MapToDto(order);

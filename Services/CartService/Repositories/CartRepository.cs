@@ -6,7 +6,7 @@ namespace CartService.Repositories;
 
 public sealed class CartRepository(SqlConnectionFactory connectionFactory) : ICartRepository
 {
-    public async Task<Guid> EnsureActiveCartAsync(Guid userId)
+    public async Task<int> EnsureActiveCartAsync(int userId)
     {
         const string findSql = @"
 SELECT TOP 1 CartId
@@ -22,12 +22,12 @@ ORDER BY CreatedAt DESC";
         {
             findCmd.Parameters.AddWithValue("@UserId", userId);
             var existing = await findCmd.ExecuteScalarAsync();
-            if (existing is Guid cartId) return cartId;
+            if (existing is int cartId) return cartId;
         }
 
         const string insertSql = @"
-INSERT INTO cart.Carts (CartId, UserId, Status, CreatedAt, UpdatedAt)
-VALUES (NEWID(), @UserId, 'ACTIVE', SYSUTCDATETIME(), SYSUTCDATETIME());
+INSERT INTO cart.Carts (UserId, Status, CreatedAt, UpdatedAt)
+VALUES (@UserId, 'ACTIVE', SYSUTCDATETIME(), SYSUTCDATETIME());
 
 SELECT TOP 1 CartId
 FROM cart.Carts
@@ -38,10 +38,10 @@ ORDER BY CreatedAt DESC";
         await using var insertCmd = new SqlCommand(insertSql, conn);
         insertCmd.Parameters.AddWithValue("@UserId", userId);
         var created = await insertCmd.ExecuteScalarAsync();
-        return (Guid)created!;
+        return (int)created!;
     }
 
-    public async Task<IReadOnlyList<CartItemRecord>> GetCartItemsAsync(Guid cartId)
+    public async Task<IReadOnlyList<CartItemRecord>> GetCartItemsAsync(int cartId)
     {
         const string sql = @"
 SELECT ci.CartItemId, ci.ProductId, ISNULL(p.ProductName, 'Unknown'), ci.Quantity, ci.UnitPrice
@@ -62,8 +62,8 @@ ORDER BY ci.CreatedAt";
         while (await reader.ReadAsync())
         {
             result.Add(new CartItemRecord(
-                reader.GetGuid(0),
-                reader.GetGuid(1),
+                reader.GetInt32(0),
+                reader.GetInt32(1),
                 reader.GetString(2),
                 reader.GetInt32(3),
                 reader.GetDecimal(4)));
@@ -72,7 +72,7 @@ ORDER BY ci.CreatedAt";
         return result;
     }
 
-    public async Task<ProductRecord?> GetProductAsync(Guid productId)
+    public async Task<ProductRecord?> GetProductAsync(int productId)
     {
         const string sql = @"
 SELECT TOP 1 ProductId, Price
@@ -88,10 +88,10 @@ WHERE ProductId = @ProductId";
         await using var reader = await cmd.ExecuteReaderAsync();
         if (!await reader.ReadAsync()) return null;
 
-        return new ProductRecord(reader.GetGuid(0), reader.GetDecimal(1));
+        return new ProductRecord(reader.GetInt32(0), reader.GetDecimal(1));
     }
 
-    public async Task AddOrIncreaseItemAsync(Guid cartId, Guid productId, int quantity, decimal unitPrice)
+    public async Task AddOrIncreaseItemAsync(int cartId, int productId, int quantity, decimal unitPrice)
     {
         const string sql = @"
 IF EXISTS (SELECT 1 FROM cart.CartItems WHERE CartId = @CartId AND ProductId = @ProductId)
@@ -102,8 +102,8 @@ BEGIN
 END
 ELSE
 BEGIN
-    INSERT INTO cart.CartItems (CartItemId, CartId, ProductId, Quantity, UnitPrice, CreatedAt)
-    VALUES (NEWID(), @CartId, @ProductId, @Quantity, @UnitPrice, SYSUTCDATETIME())
+    INSERT INTO cart.CartItems (CartId, ProductId, Quantity, UnitPrice, CreatedAt)
+    VALUES (@CartId, @ProductId, @Quantity, @UnitPrice, SYSUTCDATETIME())
 END";
 
         await using var conn = connectionFactory.Create();
@@ -118,7 +118,7 @@ END";
         await cmd.ExecuteNonQueryAsync();
     }
 
-    public async Task<bool> UpdateItemQuantityAsync(Guid cartId, Guid cartItemId, int quantity)
+    public async Task<bool> UpdateItemQuantityAsync(int cartId, int cartItemId, int quantity)
     {
         const string sql = @"
 UPDATE cart.CartItems
@@ -138,7 +138,7 @@ WHERE CartItemId = @CartItemId
         return rows > 0;
     }
 
-    public async Task RemoveItemAsync(Guid cartId, Guid cartItemId)
+    public async Task RemoveItemAsync(int cartId, int cartItemId)
     {
         const string sql = @"
 DELETE FROM cart.CartItems
@@ -155,7 +155,7 @@ WHERE CartItemId = @CartItemId
         await cmd.ExecuteNonQueryAsync();
     }
 
-    public async Task MarkCheckedOutAsync(Guid cartId)
+    public async Task MarkCheckedOutAsync(int cartId)
     {
         const string sql = @"
 UPDATE cart.Carts

@@ -4,16 +4,16 @@ namespace OrderService.Repositories;
 
 public interface IOrderRepository
 {
-    Task<IReadOnlyList<OrderWithItemsRecord>> GetOrdersWithItemsAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<OrderWithItemsRecord?> GetOrderWithItemsAsync(Guid orderId, Guid userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OrderWithItemsRecord>> GetOrdersWithItemsAsync(int userId, CancellationToken cancellationToken = default);
+    Task<OrderWithItemsRecord?> GetOrderWithItemsAsync(int orderId, int userId, CancellationToken cancellationToken = default);
 
-    Task<Guid> CreateOrReplacePendingOrderAsync(
-        Guid cartId,
-        Guid userId,
+    Task<int> CreateOrReplacePendingOrderAsync(
+        int cartId,
+        int userId,
         decimal totalAmount,
         IReadOnlyList<OrderItemCreate> items,
         CancellationToken cancellationToken = default);
 
-    Task<bool> CancelOrderAsync(Guid orderId, string? reason, CancellationToken cancellationToken = default);
-    Task<bool> CompleteOrderAsync(Guid orderId, CancellationToken cancellationToken = default);
+    Task<bool> CancelOrderAsync(int orderId, string? reason, CancellationToken cancellationToken = default);
+    Task<bool> CompleteOrderAsync(int orderId, CancellationToken cancellationToken = default);
 }

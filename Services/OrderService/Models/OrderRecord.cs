@@ -1,9 +1,9 @@
 namespace OrderService.Models;
 
 public sealed record OrderRecord(
-    Guid OrderId,
-    Guid? CartId,
-    Guid UserId,
+    int OrderId,
+    int? CartId,
+    int UserId,
     decimal TotalAmount,
     string Status,
     string? CancelReason,

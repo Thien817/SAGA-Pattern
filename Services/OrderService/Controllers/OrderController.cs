@@ -19,20 +19,20 @@ public sealed class OrderController(IOrderService orderService) : ControllerBase
         return Ok(orders);
     }
 
-    [HttpGet("{orderId:guid}")]
-    public async Task<IActionResult> GetOrder(Guid orderId)
+    [HttpGet("{orderId:int}")]
+    public async Task<IActionResult> GetOrder(int orderId)
     {
         var userId = GetUserId();
         var order = await orderService.GetOrderAsync(orderId, userId, HttpContext.RequestAborted);
         return order is null ? NotFound(new { message = "order not found" }) : Ok(order);
     }
 
-    private Guid GetUserId()
+    private int GetUserId()
     {
         var id = User.FindFirstValue(ClaimTypes.NameIdentifier)
                  ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
-        if (id is null || !Guid.TryParse(id, out var userId))
+        if (id is null || !int.TryParse(id, out var userId))
         {
             throw new UnauthorizedAccessException("Invalid token subject.");
         }

@@ -1,8 +1,8 @@
 namespace CartService.Models;
 
 public sealed record CartItemRecord(
-    Guid CartItemId,
-    Guid ProductId,
+    int CartItemId,
+    int ProductId,
     string ProductName,
     int Quantity,
     decimal UnitPrice

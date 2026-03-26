@@ -1,3 +1,3 @@
 namespace OrderService.Models;
 
-public sealed record OrderItemCreate(Guid ProductId, int Quantity, decimal UnitPrice);
+public sealed record OrderItemCreate(int ProductId, int Quantity, decimal UnitPrice);

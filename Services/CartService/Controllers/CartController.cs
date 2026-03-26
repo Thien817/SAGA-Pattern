@@ -23,7 +23,7 @@ public sealed class CartController(ICartService cartService) : ControllerBase
     [HttpPost("items")]
     public async Task<IActionResult> AddItem([FromBody] AddCartItemRequest request)
     {
-        if (request.ProductId == Guid.Empty || request.Quantity <= 0)
+        if (request.ProductId <= 0 || request.Quantity <= 0)
         {
             return BadRequest(new { message = "productId and quantity > 0 are required" });
         }
@@ -40,8 +40,8 @@ public sealed class CartController(ICartService cartService) : ControllerBase
         }
     }
 
-    [HttpPut("items/{cartItemId:guid}")]
-    public async Task<IActionResult> UpdateItem(Guid cartItemId, [FromBody] UpdateCartItemRequest request)
+    [HttpPut("items/{cartItemId:int}")]
+    public async Task<IActionResult> UpdateItem(int cartItemId, [FromBody] UpdateCartItemRequest request)
     {
         if (request.Quantity <= 0)
         {
@@ -60,8 +60,8 @@ public sealed class CartController(ICartService cartService) : ControllerBase
         }
     }
 
-    [HttpDelete("items/{cartItemId:guid}")]
-    public async Task<IActionResult> RemoveItem(Guid cartItemId)
+    [HttpDelete("items/{cartItemId:int}")]
+    public async Task<IActionResult> RemoveItem(int cartItemId)
     {
         var userId = GetUserId();
         await cartService.RemoveItemAsync(userId, cartItemId);
@@ -89,12 +89,12 @@ public sealed class CartController(ICartService cartService) : ControllerBase
         }
     }
 
-    private Guid GetUserId()
+    private int GetUserId()
     {
         var id = User.FindFirstValue(ClaimTypes.NameIdentifier)
                  ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
-        if (id is null || !Guid.TryParse(id, out var userId))
+        if (id is null || !int.TryParse(id, out var userId))
         {
             throw new UnauthorizedAccessException("Invalid token subject.");
         }

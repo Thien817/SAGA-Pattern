@@ -4,9 +4,9 @@ namespace CartService.Services;
 
 public interface ICartService
 {
-    Task<CartDto> GetMyCartAsync(Guid userId);
-    Task<CartDto> AddItemAsync(Guid userId, AddCartItemRequest request);
-    Task<CartDto> UpdateItemAsync(Guid userId, Guid cartItemId, UpdateCartItemRequest request);
-    Task RemoveItemAsync(Guid userId, Guid cartItemId);
-    Task<CheckoutResponse> CheckoutAsync(Guid userId);
+    Task<CartDto> GetMyCartAsync(int userId);
+    Task<CartDto> AddItemAsync(int userId, AddCartItemRequest request);
+    Task<CartDto> UpdateItemAsync(int userId, int cartItemId, UpdateCartItemRequest request);
+    Task RemoveItemAsync(int userId, int cartItemId);
+    Task<CheckoutResponse> CheckoutAsync(int userId);
 }
