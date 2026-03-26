@@ -7,4 +7,5 @@ public interface IInventoryRepository
     Task<IReadOnlyList<ProductRecord>> GetProductsAsync();
     Task<ProductRecord?> GetByIdAsync(int productId);
     Task<bool> ReserveStockAsync(int productId, int quantity);
+    Task<InventoryReservationResult> ReserveOrderAsync(int orderId, CancellationToken cancellationToken = default);
 }

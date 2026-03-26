@@ -1,4 +1,5 @@
 using System.Text;
+using CartService.BackgroundServices;
 using CartService.Infrastructure;
 using CartService.Repositories;
 using CartService.Services;
@@ -54,6 +55,7 @@ var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "SagaPatternClients";
 builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartService, global::CartService.Services.CartService>();
+builder.Services.AddHostedService<CartOutboxDispatcher>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

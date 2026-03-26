@@ -1,4 +1,5 @@
 using CartService.Models;
+using CartService.DTOs;
 
 namespace CartService.Repositories;
 
@@ -11,4 +12,5 @@ public interface ICartRepository
     Task<bool> UpdateItemQuantityAsync(int cartId, int cartItemId, int quantity);
     Task RemoveItemAsync(int cartId, int cartItemId);
     Task MarkCheckedOutAsync(int cartId);
+    Task<CheckoutResponse> CheckoutAndStageCartCheckedOutAsync(int userId, CancellationToken cancellationToken = default);
 }

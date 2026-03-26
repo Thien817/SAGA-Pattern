@@ -53,21 +53,6 @@ public sealed class CartService(ICartRepository cartRepository) : ICartService
 
     public async Task<CheckoutResponse> CheckoutAsync(int userId)
     {
-        var cartId = await cartRepository.EnsureActiveCartAsync(userId);
-        var items = await cartRepository.GetCartItemsAsync(cartId);
-
-        if (items.Count == 0)
-        {
-            throw new InvalidOperationException("Cart is empty.");
-        }
-
-        await cartRepository.MarkCheckedOutAsync(cartId);
-
-        var dtoItems = items
-            .Select(x => new CartItemDto(x.CartItemId, x.ProductId, x.ProductName, x.Quantity, x.UnitPrice, x.Quantity * x.UnitPrice))
-            .ToList();
-
-        var totalAmount = dtoItems.Sum(x => x.LineTotal);
-        return new CheckoutResponse(cartId, userId, totalAmount, dtoItems);
+        return await cartRepository.CheckoutAndStageCartCheckedOutAsync(userId);
     }
 }

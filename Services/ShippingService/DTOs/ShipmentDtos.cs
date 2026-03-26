@@ -10,3 +10,4 @@ public sealed record ShipmentDto(
     DateTime UpdatedAt);
 
 public sealed record InventoryReservedPayload(int OrderId, string? ReservationReason);
+public sealed record ShipmentCreatedPayload(int OrderId, string Status);

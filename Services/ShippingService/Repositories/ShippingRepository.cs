@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Microsoft.Data.SqlClient;
+using ShippingService.DTOs;
 using ShippingService.Infrastructure;
 using ShippingService.Models;
 
@@ -6,21 +8,56 @@ namespace ShippingService.Repositories;
 
 public sealed class ShippingRepository(SqlConnectionFactory connectionFactory) : IShippingRepository
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public async Task CreateShipmentAsync(int orderId, CancellationToken ct = default)
     {
-        const string sql = @"
-IF NOT EXISTS (SELECT 1 FROM ship.Shipments WHERE OrderId = @OrderId)
+        await using var conn = connectionFactory.Create();
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        try
+        {
+            const string upsertShipmentSql = @"
+IF EXISTS (SELECT 1 FROM ship.Shipments WHERE OrderId = @OrderId)
+BEGIN
+    UPDATE ship.Shipments
+    SET Status = 'CREATED',
+        UpdatedAt = SYSUTCDATETIME()
+    WHERE OrderId = @OrderId
+END
+ELSE
 BEGIN
     INSERT INTO ship.Shipments (OrderId, Status, CreatedAt, UpdatedAt)
     VALUES (@OrderId, 'CREATED', SYSUTCDATETIME(), SYSUTCDATETIME())
 END";
 
-        await using var conn = connectionFactory.Create();
-        await conn.OpenAsync(ct);
+            await using (var shipmentCmd = new SqlCommand(upsertShipmentSql, conn, (SqlTransaction)tx))
+            {
+                shipmentCmd.Parameters.AddWithValue("@OrderId", orderId);
+                await shipmentCmd.ExecuteNonQueryAsync(ct);
+            }
 
-        await using var cmd = new SqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@OrderId", orderId);
-        await cmd.ExecuteNonQueryAsync(ct);
+            var payloadJson = JsonSerializer.Serialize(new ShipmentCreatedPayload(orderId, "CREATED"), JsonOptions);
+
+            const string insertOutboxSql = @"
+INSERT INTO msg.OutboxEvents (AggregateType, AggregateId, EventType, PayloadJson)
+VALUES ('Shipping', @AggregateId, 'ShipmentCreated', @PayloadJson)";
+
+            await using (var outboxCmd = new SqlCommand(insertOutboxSql, conn, (SqlTransaction)tx))
+            {
+                outboxCmd.Parameters.AddWithValue("@AggregateId", orderId);
+                outboxCmd.Parameters.AddWithValue("@PayloadJson", payloadJson);
+                await outboxCmd.ExecuteNonQueryAsync(ct);
+            }
+
+            await tx.CommitAsync(ct);
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public async Task<ShipmentRecord?> GetShipmentByOrderIdAsync(int orderId, CancellationToken ct = default)

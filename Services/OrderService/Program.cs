@@ -57,6 +57,7 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, global::OrderService.Services.OrderService>();
 
 builder.Services.AddHostedService<OrderInboxProcessor>();
+builder.Services.AddHostedService<OrderOutboxDispatcher>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

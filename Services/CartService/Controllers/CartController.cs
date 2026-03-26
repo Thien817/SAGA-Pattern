@@ -78,7 +78,7 @@ public sealed class CartController(ICartService cartService) : ControllerBase
 
             return Ok(new
             {
-                message = "CartCheckedOut published",
+                message = "CartCheckedOut staged to outbox",
                 eventType = "CartCheckedOut",
                 payload = result
             });

@@ -43,6 +43,13 @@ public sealed class OrderService(IOrderRepository orderRepository) : IOrderServi
                     cancellationToken);
                 return;
             }
+            case "PaymentSucceeded":
+            {
+                var payload = JsonSerializer.Deserialize<PaymentSucceededPayload>(payloadJson, JsonOptions)
+                              ?? throw new InvalidOperationException("Invalid PaymentSucceeded payload.");
+                await orderRepository.MarkPaidAsync(payload.OrderId, cancellationToken);
+                return;
+            }
             case "PaymentFailed":
             {
                 var payload = JsonSerializer.Deserialize<PaymentFailedPayload>(payloadJson, JsonOptions)
@@ -59,8 +66,14 @@ public sealed class OrderService(IOrderRepository orderRepository) : IOrderServi
             }
             case "InventoryReserved":
             {
-                var payload = JsonSerializer.Deserialize<InventoryReservedPayload>(payloadJson, JsonOptions)
-                              ?? throw new InvalidOperationException("Invalid InventoryReserved payload.");
+                _ = JsonSerializer.Deserialize<InventoryReservedPayload>(payloadJson, JsonOptions)
+                    ?? throw new InvalidOperationException("Invalid InventoryReserved payload.");
+                return;
+            }
+            case "ShipmentCreated":
+            {
+                var payload = JsonSerializer.Deserialize<ShipmentCreatedPayload>(payloadJson, JsonOptions)
+                              ?? throw new InvalidOperationException("Invalid ShipmentCreated payload.");
                 await orderRepository.CompleteOrderAsync(payload.OrderId, cancellationToken);
                 return;
             }

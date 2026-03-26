@@ -27,3 +27,9 @@
 ## OS files
 .DS_Store
 Thumbs.db
+/artifacts/cart-build
+/artifacts/inventory-build
+/artifacts/order-build
+/artifacts/payment-build
+/artifacts/shipping-build
+/artifacts/auth-build

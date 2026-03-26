@@ -24,6 +24,7 @@ builder.Services.AddScoped<IShippingRepository, ShippingRepository>();
 builder.Services.AddScoped<IShippingService, global::ShippingService.Services.ShippingService>();
 
 builder.Services.AddHostedService<ShippingInboxProcessor>();
+builder.Services.AddHostedService<ShippingOutboxDispatcher>();
 
 var app = builder.Build();
 

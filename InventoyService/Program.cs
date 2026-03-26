@@ -1,9 +1,7 @@
+using InventoryService.BackgroundServices;
 using InventoryService.Infrastructure;
 using InventoryService.Repositories;
 using InventoryService.Services;
-
-// Ensure the correct class is referenced instead of the namespace
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,12 +10,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Server=localhost;Database=SagaCommerce;User ID=sa;Password=12345;TrustServerCertificate=True;";
+    ?? "Server=CAMTU\\CAMTU;Database=SagaCommerce;User ID=sa;Password=05042003;TrustServerCertificate=True;";
 
 builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
 
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<IInventoryService, InventoryService.Services.InventoryService>();
+builder.Services.AddHostedService<InventoryInboxProcessor>();
+builder.Services.AddHostedService<InventoryOutboxDispatcher>();
 
 var app = builder.Build();
 

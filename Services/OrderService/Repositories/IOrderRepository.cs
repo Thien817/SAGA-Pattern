@@ -14,6 +14,7 @@ public interface IOrderRepository
         IReadOnlyList<OrderItemCreate> items,
         CancellationToken cancellationToken = default);
 
+    Task<bool> MarkPaidAsync(int orderId, CancellationToken cancellationToken = default);
     Task<bool> CancelOrderAsync(int orderId, string? reason, CancellationToken cancellationToken = default);
     Task<bool> CompleteOrderAsync(int orderId, CancellationToken cancellationToken = default);
 }
