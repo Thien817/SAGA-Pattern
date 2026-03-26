@@ -1,10 +1,12 @@
-﻿using InventoryService.Services;
+using InventoryService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryService.Controllers;
 
 [ApiController]
 [Route("api/products")]
+[Authorize]
 public class ProductsController(IInventoryService service) : ControllerBase
 {
     [HttpGet]

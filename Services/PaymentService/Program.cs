@@ -1,10 +1,10 @@
 using System.Text;
-using InventoryService.BackgroundServices;
-using InventoryService.Infrastructure;
-using InventoryService.Repositories;
-using InventoryService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using PaymentService.BackgroundServices;
+using PaymentService.Infrastructure;
+using PaymentService.Repositories;
+using PaymentService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +14,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
-        Title = "Inventory Service API",
+        Title = "Payment Service API",
         Version = "v1"
     });
 
@@ -53,10 +53,9 @@ var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "SagaPattern";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "SagaPatternClients";
 
 builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
-
-builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
-builder.Services.AddScoped<IInventoryService, InventoryService.Services.InventoryService>();
-builder.Services.AddHostedService<InventoryInboxProcessor>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentService, PaymentService.Services.PaymentService>();
+builder.Services.AddHostedService<PaymentInboxProcessor>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

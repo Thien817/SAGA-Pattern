@@ -1,4 +1,4 @@
-﻿namespace InventoryService.DTOs;
+namespace InventoryService.DTOs;
 
 public sealed record ProductDto(
     int ProductId,
@@ -6,3 +6,5 @@ public sealed record ProductDto(
     decimal Price,
     int Stock
 );
+
+public sealed record PaymentSucceededPayload(int OrderId);
