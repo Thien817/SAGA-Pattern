@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "ShippingService": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:51521;http://localhost:51525"
+    }
+  }
+}
