@@ -35,12 +35,20 @@ public sealed class OrderService(IOrderRepository orderRepository) : IOrderServi
 
                 var items = payload.Items.Select(x => new OrderItemCreate(x.ProductId, x.Quantity, x.UnitPrice)).ToList();
 
-                await orderRepository.CreateOrReplacePendingOrderAsync(
+                var orderId = await orderRepository.CreateOrReplacePendingOrderAsync(
                     payload.CartId,
                     payload.UserId,
                     payload.TotalAmount,
                     items,
                     cancellationToken);
+
+                var orderCreatedPayload = JsonSerializer.Serialize(new
+                {
+                    OrderId = orderId,
+                    payload.TotalAmount
+                });
+
+                await orderRepository.AddOutboxEventAsync("Order", orderId, "OrderCreated", orderCreatedPayload, cancellationToken);
                 return;
             }
             case "PaymentFailed":

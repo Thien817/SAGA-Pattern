@@ -11,4 +11,5 @@ public interface ICartRepository
     Task<bool> UpdateItemQuantityAsync(int cartId, int cartItemId, int quantity);
     Task RemoveItemAsync(int cartId, int cartItemId);
     Task MarkCheckedOutAsync(int cartId);
+    Task AddOutboxEventAsync(string aggregateType, int aggregateId, string eventType, string payloadJson);
 }

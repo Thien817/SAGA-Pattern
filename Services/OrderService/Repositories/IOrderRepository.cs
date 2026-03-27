@@ -16,4 +16,5 @@ public interface IOrderRepository
 
     Task<bool> CancelOrderAsync(int orderId, string? reason, CancellationToken cancellationToken = default);
     Task<bool> CompleteOrderAsync(int orderId, CancellationToken cancellationToken = default);
+    Task AddOutboxEventAsync(string aggregateType, int aggregateId, string eventType, string payloadJson, CancellationToken cancellationToken = default);
 }

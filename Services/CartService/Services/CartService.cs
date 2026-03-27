@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CartService.DTOs;
 using CartService.Repositories;
 
@@ -68,6 +69,17 @@ public sealed class CartService(ICartRepository cartRepository) : ICartService
             .ToList();
 
         var totalAmount = dtoItems.Sum(x => x.LineTotal);
+
+        var pendingOrderPayload = JsonSerializer.Serialize(new
+        {
+            CartId = cartId,
+            UserId = userId,
+            TotalAmount = totalAmount,
+            Items = dtoItems.Select(x => new { x.ProductId, x.Quantity, x.UnitPrice }).ToList()
+        });
+
+        await cartRepository.AddOutboxEventAsync("Cart", cartId, "CartCheckedOut", pendingOrderPayload);
+
         return new CheckoutResponse(cartId, userId, totalAmount, dtoItems);
     }
 }

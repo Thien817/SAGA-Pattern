@@ -171,4 +171,22 @@ WHERE CartId = @CartId";
 
         await cmd.ExecuteNonQueryAsync();
     }
+
+    public async Task AddOutboxEventAsync(string aggregateType, int aggregateId, string eventType, string payloadJson)
+    {
+        const string sql = @"
+INSERT INTO msg.OutboxEvents (AggregateType, AggregateId, EventType, PayloadJson, PublishStatus, RetryCount)
+VALUES (@AggregateType, @AggregateId, @EventType, @PayloadJson, 'PENDING', 0);";
+
+        await using var conn = connectionFactory.Create();
+        await conn.OpenAsync();
+
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@AggregateType", aggregateType);
+        cmd.Parameters.AddWithValue("@AggregateId", aggregateId);
+        cmd.Parameters.AddWithValue("@EventType", eventType);
+        cmd.Parameters.AddWithValue("@PayloadJson", payloadJson);
+
+        await cmd.ExecuteNonQueryAsync();
+    }
 }
