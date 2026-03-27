@@ -53,6 +53,7 @@ OUTPUT inserted.PaymentId, inserted.OrderId, inserted.Amount, inserted.Status, i
                 reader.GetString(3),
                 reader.IsDBNull(4) ? null : reader.GetString(4));
 
+            await reader.CloseAsync();
             tx.Commit();
             return result;
         }
@@ -80,12 +81,15 @@ WHERE OrderId = @OrderId";
         if (!await reader.ReadAsync(cancellationToken))
             return null;
 
-        return new PaymentRecord(
+        var record = new PaymentRecord(
             reader.GetInt32(0),
             reader.GetInt32(1),
             reader.GetDecimal(2),
             reader.GetString(3),
             reader.IsDBNull(4) ? null : reader.GetString(4));
+
+        await reader.CloseAsync();
+        return record;
     }
 
     public async Task<PaymentRecord?> MarkRefundedAsync(int orderId, string? reason, CancellationToken cancellationToken = default)
@@ -110,12 +114,15 @@ WHERE OrderId = @OrderId
         if (!await reader.ReadAsync(cancellationToken))
             return null;
 
-        return new PaymentRecord(
+        var record = new PaymentRecord(
             reader.GetInt32(0),
             reader.GetInt32(1),
             reader.GetDecimal(2),
             reader.GetString(3),
             reader.IsDBNull(4) ? null : reader.GetString(4));
+
+        await reader.CloseAsync();
+        return record;
     }
 
     public async Task AddRefundAsync(int paymentId, int orderId, decimal amount, string? reason, CancellationToken cancellationToken = default)
