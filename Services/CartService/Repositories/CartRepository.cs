@@ -88,7 +88,92 @@ WHERE ProductId = @ProductId";
         await using var reader = await cmd.ExecuteReaderAsync();
         if (!await reader.ReadAsync()) return null;
 
-        return new ProductRecord(reader.GetInt32(0), reader.GetDecimal(1));
+        var record = new ProductRecord(reader.GetInt32(0), reader.GetDecimal(1));
+        await reader.CloseAsync();
+        return record;
+    }
+
+    public async Task<int> GetAvailableStockAsync(int productId)
+    {
+        const string sql = @"
+SELECT TOP 1 (OnHandQty - ReservedQty)
+FROM inv.InventoryStocks
+WHERE ProductId = @ProductId";
+
+        await using var conn = connectionFactory.Create();
+        await conn.OpenAsync();
+
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@ProductId", productId);
+
+        var value = await cmd.ExecuteScalarAsync();
+        if (value is null || value is DBNull) return 0;
+
+        var available = Convert.ToInt32(value);
+        return Math.Max(0, available);
+    }
+
+    public async Task<int?> GetCartItemQuantityAsync(int cartId, int cartItemId)
+    {
+        const string sql = @"
+SELECT TOP 1 Quantity
+FROM cart.CartItems
+WHERE CartId = @CartId
+  AND CartItemId = @CartItemId";
+
+        await using var conn = connectionFactory.Create();
+        await conn.OpenAsync();
+
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@CartId", cartId);
+        cmd.Parameters.AddWithValue("@CartItemId", cartItemId);
+
+        var value = await cmd.ExecuteScalarAsync();
+        if (value is null || value is DBNull) return null;
+
+        return Convert.ToInt32(value);
+    }
+
+    public async Task<int?> GetProductIdByCartItemAsync(int cartId, int cartItemId)
+    {
+        const string sql = @"
+SELECT TOP 1 ProductId
+FROM cart.CartItems
+WHERE CartId = @CartId
+  AND CartItemId = @CartItemId";
+
+        await using var conn = connectionFactory.Create();
+        await conn.OpenAsync();
+
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@CartId", cartId);
+        cmd.Parameters.AddWithValue("@CartItemId", cartItemId);
+
+        var value = await cmd.ExecuteScalarAsync();
+        if (value is null || value is DBNull) return null;
+
+        return Convert.ToInt32(value);
+    }
+
+    public async Task<int> GetCartItemQuantityByProductAsync(int cartId, int productId)
+    {
+        const string sql = @"
+SELECT TOP 1 Quantity
+FROM cart.CartItems
+WHERE CartId = @CartId
+  AND ProductId = @ProductId";
+
+        await using var conn = connectionFactory.Create();
+        await conn.OpenAsync();
+
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@CartId", cartId);
+        cmd.Parameters.AddWithValue("@ProductId", productId);
+
+        var value = await cmd.ExecuteScalarAsync();
+        if (value is null || value is DBNull) return 0;
+
+        return Convert.ToInt32(value);
     }
 
     public async Task AddOrIncreaseItemAsync(int cartId, int productId, int quantity, decimal unitPrice)

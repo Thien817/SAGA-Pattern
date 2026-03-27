@@ -28,6 +28,15 @@ public sealed class CartService(ICartRepository cartRepository) : ICartService
             throw new InvalidOperationException("Product not found.");
         }
 
+        var available = await cartRepository.GetAvailableStockAsync(request.ProductId);
+        var currentInCart = await cartRepository.GetCartItemQuantityByProductAsync(cartId, request.ProductId);
+        var totalRequested = currentInCart + request.Quantity;
+
+        if (totalRequested > available)
+        {
+            throw new InvalidOperationException($"Requested quantity {totalRequested} exceeds available stock {available}.");
+        }
+
         await cartRepository.AddOrIncreaseItemAsync(cartId, request.ProductId, request.Quantity, product.Price);
 
         return await GetMyCartAsync(userId);
@@ -36,6 +45,25 @@ public sealed class CartService(ICartRepository cartRepository) : ICartService
     public async Task<CartDto> UpdateItemAsync(int userId, int cartItemId, UpdateCartItemRequest request)
     {
         var cartId = await cartRepository.EnsureActiveCartAsync(userId);
+        var existingQty = await cartRepository.GetCartItemQuantityAsync(cartId, cartItemId);
+
+        if (existingQty is null)
+        {
+            throw new InvalidOperationException("Cart item not found.");
+        }
+
+        var productId = await cartRepository.GetProductIdByCartItemAsync(cartId, cartItemId);
+        if (productId is null)
+        {
+            throw new InvalidOperationException("Cart item not found.");
+        }
+
+        var available = await cartRepository.GetAvailableStockAsync(productId.Value);
+        if (request.Quantity > available)
+        {
+            throw new InvalidOperationException($"Requested quantity {request.Quantity} exceeds available stock {available}.");
+        }
+
         var ok = await cartRepository.UpdateItemQuantityAsync(cartId, cartItemId, request.Quantity);
 
         if (!ok)
