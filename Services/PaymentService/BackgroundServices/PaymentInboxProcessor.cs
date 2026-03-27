@@ -4,11 +4,20 @@ using PaymentService.Services;
 
 namespace PaymentService.BackgroundServices;
 
-public sealed class PaymentInboxProcessor(IServiceScopeFactory scopeFactory, SqlConnectionFactory connectionFactory) : BackgroundService
+public sealed class PaymentInboxProcessor : BackgroundService
 {
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly SqlConnectionFactory _connectionFactory;
+
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
     private const string ConsumerName = "PaymentService";
     private const int BatchSize = 10;
+
+    public PaymentInboxProcessor(IServiceScopeFactory scopeFactory, SqlConnectionFactory connectionFactory)
+    {
+        _scopeFactory = scopeFactory;
+        _connectionFactory = connectionFactory;
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -22,7 +31,7 @@ public sealed class PaymentInboxProcessor(IServiceScopeFactory scopeFactory, Sql
                     await HandleOneAsync(inboxEvent, stoppingToken);
                 }
             }
-            catch (Exception)
+            catch
             {
             }
 
@@ -42,7 +51,7 @@ WHERE ConsumerName = @ConsumerName
   AND ProcessStatus = 'RECEIVED'
 ORDER BY ReceivedAt";
 
-        await using var conn = connectionFactory.Create();
+        await using var conn = _connectionFactory.Create();
         await conn.OpenAsync(cancellationToken);
 
         await using var cmd = new SqlCommand(sql, conn);
@@ -54,7 +63,10 @@ ORDER BY ReceivedAt";
         var result = new List<(int, string, string)>();
         while (await reader.ReadAsync(cancellationToken))
         {
-            result.Add((reader.GetInt32(0), reader.GetString(1), reader.GetString(2)));
+            result.Add((
+                reader.GetInt32(0),
+                reader.GetString(1),
+                reader.GetString(2)));
         }
 
         return result;
@@ -64,10 +76,10 @@ ORDER BY ReceivedAt";
     {
         try
         {
-            using var scope = scopeFactory.CreateScope();
-            var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+            using var scope = _scopeFactory.CreateScope();
+            var service = scope.ServiceProvider.GetRequiredService<IPaymentService>();
 
-            await paymentService.HandleInboxEventAsync(inboxEvent.EventType, inboxEvent.PayloadJson, cancellationToken);
+            await service.HandleInboxEventAsync(inboxEvent.EventType, inboxEvent.PayloadJson, cancellationToken);
             await MarkProcessedAsync(inboxEvent.EventId, cancellationToken);
         }
         catch (Exception ex)
@@ -85,7 +97,7 @@ SET ProcessStatus = 'PROCESSED',
     ErrorMessage = NULL
 WHERE EventId = @EventId";
 
-        await using var conn = connectionFactory.Create();
+        await using var conn = _connectionFactory.Create();
         await conn.OpenAsync(cancellationToken);
 
         await using var cmd = new SqlCommand(sql, conn);
@@ -102,7 +114,7 @@ SET ProcessStatus = 'FAILED',
     ErrorMessage = @ErrorMessage
 WHERE EventId = @EventId";
 
-        await using var conn = connectionFactory.Create();
+        await using var conn = _connectionFactory.Create();
         await conn.OpenAsync(cancellationToken);
 
         await using var cmd = new SqlCommand(sql, conn);

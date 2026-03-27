@@ -1,26 +1,17 @@
 using System.Text.Json;
 using PaymentService.DTOs;
-using PaymentService.Models;
 using PaymentService.Repositories;
 
 namespace PaymentService.Services;
 
-public sealed class PaymentService(IPaymentRepository paymentRepository) : IPaymentService
+public sealed class PaymentService(IPaymentRepository repo, IConfiguration configuration) : IPaymentService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-
-    public async Task<PaymentDto?> GetPaymentByOrderIdAsync(int orderId, CancellationToken cancellationToken = default)
-    {
-        var payment = await paymentRepository.GetPaymentByOrderIdAsync(orderId, cancellationToken);
-        return payment is null ? null : MapToDto(payment);
-    }
 
     public async Task HandleInboxEventAsync(string eventType, string payloadJson, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(eventType))
-        {
             throw new InvalidOperationException("eventType is required.");
-        }
 
         switch (eventType)
         {
@@ -28,14 +19,54 @@ public sealed class PaymentService(IPaymentRepository paymentRepository) : IPaym
             {
                 var payload = JsonSerializer.Deserialize<OrderCreatedPayload>(payloadJson, JsonOptions)
                               ?? throw new InvalidOperationException("Invalid OrderCreated payload.");
-                await paymentRepository.UpsertSuccessfulPaymentAsync(payload.OrderId, payload.TotalAmount, cancellationToken);
+
+                var shouldFail = configuration.GetValue<bool>("Payment:AutoFailOnOrderCreated");
+                var status = shouldFail ? "FAILED" : "SUCCESS";
+                var failureReason = shouldFail ? "Auto-failed by Payment:AutoFailOnOrderCreated" : null;
+
+                var result = await repo.UpsertPaymentResultAsync(
+                    payload.OrderId,
+                    payload.TotalAmount,
+                    status,
+                    failureReason,
+                    cancellationToken);
+
+                var outboxPayload = JsonSerializer.Serialize(new
+                {
+                    result.OrderId,
+                    result.Amount,
+                    PaymentId = result.PaymentId,
+                    Status = result.Status,
+                    FailureReason = result.FailureReason
+                });
+
+                var outboxEventType = shouldFail ? "PaymentFailed" : "PaymentSucceeded";
+                await repo.AddOutboxEventAsync("Payment", result.PaymentId, outboxEventType, outboxPayload, cancellationToken);
                 return;
             }
             case "InventoryFailed":
             {
                 var payload = JsonSerializer.Deserialize<InventoryFailedPayload>(payloadJson, JsonOptions)
                               ?? throw new InvalidOperationException("Invalid InventoryFailed payload.");
-                await paymentRepository.RefundPaymentAsync(payload.OrderId, payload.FailureReason, cancellationToken);
+
+                var refunded = await repo.MarkRefundedAsync(payload.OrderId, payload.FailureReason, cancellationToken);
+                if (refunded is null)
+                {
+                    return;
+                }
+
+                await repo.AddRefundAsync(refunded.PaymentId, refunded.OrderId, refunded.Amount, payload.FailureReason, cancellationToken);
+
+                var outboxPayload = JsonSerializer.Serialize(new
+                {
+                    refunded.OrderId,
+                    refunded.Amount,
+                    PaymentId = refunded.PaymentId,
+                    refunded.Status,
+                    Reason = payload.FailureReason
+                });
+
+                await repo.AddOutboxEventAsync("Payment", refunded.PaymentId, "PaymentRefunded", outboxPayload, cancellationToken);
                 return;
             }
             default:
@@ -43,48 +74,45 @@ public sealed class PaymentService(IPaymentRepository paymentRepository) : IPaym
         }
     }
 
-    public async Task<PaymentDto> SimulateSuccessAsync(int orderId, CancellationToken cancellationToken = default)
+    public async Task<SimulatePaymentResponse> SimulateSuccessAsync(int orderId, CancellationToken cancellationToken = default)
     {
-        var amount = await ResolveAmountAsync(orderId, cancellationToken);
-        var payment = await paymentRepository.UpsertSuccessfulPaymentAsync(orderId, amount, cancellationToken);
-        return MapToDto(payment);
-    }
+        var existing = await repo.GetPaymentByOrderIdAsync(orderId, cancellationToken)
+                       ?? throw new InvalidOperationException("Payment does not exist. Create it via OrderCreated event first.");
 
-    public async Task<PaymentDto> SimulateFailAsync(int orderId, string? failureReason, CancellationToken cancellationToken = default)
-    {
-        var amount = await ResolveAmountAsync(orderId, cancellationToken);
-        var payment = await paymentRepository.UpsertFailedPaymentAsync(orderId, amount, failureReason, cancellationToken);
-        return MapToDto(payment);
-    }
+        var result = await repo.UpsertPaymentResultAsync(orderId, existing.Amount, "SUCCESS", null, cancellationToken);
 
-    private async Task<decimal> ResolveAmountAsync(int orderId, CancellationToken cancellationToken)
-    {
-        var existingPayment = await paymentRepository.GetPaymentByOrderIdAsync(orderId, cancellationToken);
-        if (existingPayment is not null)
+        var outboxPayload = JsonSerializer.Serialize(new
         {
-            return existingPayment.Amount;
-        }
+            result.OrderId,
+            result.Amount,
+            PaymentId = result.PaymentId,
+            Status = result.Status
+        });
 
-        var orderAmount = await paymentRepository.GetOrderAmountAsync(orderId, cancellationToken);
-        if (orderAmount is null)
-        {
-            throw new InvalidOperationException($"OrderId {orderId} was not found.");
-        }
+        await repo.AddOutboxEventAsync("Payment", result.PaymentId, "PaymentSucceeded", outboxPayload, cancellationToken);
 
-        return orderAmount.Value;
+        return new SimulatePaymentResponse(result.OrderId, result.Amount, result.Status, result.FailureReason);
     }
 
-    private static PaymentDto MapToDto(PaymentRecord record)
+    public async Task<SimulatePaymentResponse> SimulateFailAsync(int orderId, CancellationToken cancellationToken = default)
     {
-        return new PaymentDto(
-            record.PaymentId,
-            record.OrderId,
-            record.Amount,
-            record.Status,
-            record.Provider,
-            record.TransactionRef,
-            record.FailureReason,
-            record.CreatedAt,
-            record.UpdatedAt);
+        var existing = await repo.GetPaymentByOrderIdAsync(orderId, cancellationToken)
+                       ?? throw new InvalidOperationException("Payment does not exist. Create it via OrderCreated event first.");
+
+        const string failureReason = "Simulated payment failure";
+        var result = await repo.UpsertPaymentResultAsync(orderId, existing.Amount, "FAILED", failureReason, cancellationToken);
+
+        var outboxPayload = JsonSerializer.Serialize(new
+        {
+            result.OrderId,
+            result.Amount,
+            PaymentId = result.PaymentId,
+            Status = result.Status,
+            FailureReason = result.FailureReason
+        });
+
+        await repo.AddOutboxEventAsync("Payment", result.PaymentId, "PaymentFailed", outboxPayload, cancellationToken);
+
+        return new SimulatePaymentResponse(result.OrderId, result.Amount, result.Status, result.FailureReason);
     }
 }

@@ -3,10 +3,11 @@
     "PaymentService": {
       "commandName": "Project",
       "launchBrowser": true,
+      "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:57807;http://localhost:57808"
+      "applicationUrl": "https://localhost:53293;http://localhost:53294"
     }
   }
 }
